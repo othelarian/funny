@@ -1,0 +1,5 @@
+
+init = ->
+  #
+  console.log 'plop'
+  #

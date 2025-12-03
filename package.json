@@ -1,0 +1,18 @@
+{
+  "name": "funny",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "chokidar": "^4.0.3",
+    "coffeescript": "^2.7.0",
+    "express": "^5.1.0",
+    "pug": "^3.0.3",
+    "sass": "^1.87.0"
+  }
+}
