@@ -1,16 +1,112 @@
+fsp = require 'fs/promises'
+fs = require 'fs'
 
-task 'probaMaterial', '', ->
-  distrib = 0.55
-  nbTour = 3
-  val = 15.5
-  t = (distrib * val * v for v in [1..nbTour])
-  t = t.reduce ((a, b) => a + b), 0
-  console.log(t / nbTour)
+# COMPILATION HELPERS ###########################
+
+building = no
+build = ->
+  building = yes
+  # helpers #################
+  createDir = ->
+    try
+      await fsp.mkdir './dist'
+    catch err
+      if err.code is 'EEXIST' then return else throw err
+  # exec ####################
+  await createDir()
+  compileSass './src/style.sass'
+  compileCoffee './src/script.coffee'
+
+getOutPth = (pth, lg) ->
+  path = require 'path'
+  "./dist/#{path.parse(pth).name}.#{lg}"
+
+checkCompile = (pth, lg) ->
+  outPth = getOutPth pth, lg
+  try
+    dt = (fs.statSync outPth).mtimeMs
+  catch err
+    if err.code is 'ENOENT' then dt = 0
+  st = (fs.statSync pth).mtimeMs
+  [st > dt, outPth]
+
+compileStart = (lg) ->
+  console.log "[#{new Date().toLocaleString()}] Compiling #{lg} ..."
+
+compileSuccess = (lg) ->
+  console.log " => #{lg} compiled"
+
+compileCoffee = (pth) ->
+  [ok, outPth] = checkCompile pth, 'js'
+  if ok
+    coffee = require 'coffeescript'
+    compileStart 'coffee'
+    try
+      code = await fsp.readFile pth, { encoding: 'utf-8' }
+      out = coffee.compile code, {bare: yes}
+      await fsp.writeFile outPth, out
+      compileSuccess pth
+    catch err
+      if building then throw err else console.log err
+
+compileSass = (pth) ->
+  [ok, outPth] = checkCompile pth, 'css'
+  if ok
+    sass = require 'sass'
+    compileStart 'sass'
+    try
+      out = sass.compile pth, { style: 'compressed' }
+      await fsp.writeFile outPth, out.css
+      compileSuccess pth
+    catch err
+      if building then throw err else console.log err
+
+compilePug = (pth) ->
+  [ok, outPth] = checkCompile pth, 'html'
+  if ok
+    if pth.includes('roller.pug')
+      outPth = outPth.replace('roller', 'index')
+    pug = require 'pug'
+    try
+      out = pug.renderFile pth, {}
+      await fsp.writeFile outPth, out
+      compileSuccess pth
+    catch err
+      if building then throw err else console.log err
+
+# TASKS ROLLER ##################################
+
+task 'clean', '', ->
+  await fsp.rm './dist', {recursive: yes}
+
+task 'builder', '', ->
+  build()
+  compilePug './views/roller.pug'
+
+task 'roller', '', ->
+  # Requires ########
+  chokidar = require 'chokidar'
+  express = require 'express'
+  # Exec ############
+  build()
+  # launch chokidar
+  watcher = chokidar.watch 'src'
+  watcher.on 'change', (pth) =>
+    console.log "watcher, path => #{pth}"
+    switch pth.split('.')[1]
+      when 'coffee' then compileCoffee pth
+      when 'sass'   then compileSass pth
+  # launch the server
+  port = 5001
+  app = express()
+  app.use express.static('./dist')
+  app.set 'views', 'views'
+  app.set 'view engine', 'pug'
+  app.get '/', (_req, res) -> res.render 'roller'
+  app.listen(port, => console.log "Listening on port #{port}")
 
 
-
-
-
+# TASKS ROLLS ###################################
 
 die = -> Math.floor(Math.random()*6) + 1
 outDice = (prep, rolls, res) ->
@@ -67,70 +163,3 @@ task 'recl', '', (opts) ->
     when nbA[0] == nbD[0]
       (if nbA[0] > 3 then 'oui' else 'non') + ', et Twist !'
   outDice prep, rolls, res
-
-task 'roller', '', ->
-  # Requires ########
-  chokidar = require 'chokidar'
-  coffee = require 'coffeescript'
-  express = require 'express'
-  fsp = require 'fs/promises'
-  fs = require 'fs'
-  sass = require 'sass'
-  # Helpers #########
-  createDir = ->
-    try
-      await fsp.mkdir './dist'
-    catch err
-      if err.code is 'EEXIST' then return else throw err
-  getOutPth = (pth, lg) ->
-    "./dist/#{pth.replace('./src/','').split('.')[0]}.#{lg}"
-  checkCompile = (pth, lg) ->
-    outPth = getOutPth pth, lg
-    try
-      dt = (fs.statSync outPth).mtimeMs
-    catch err
-      if err.code is 'ENOENT' then dt = 0
-    st = (fs.statSync pth).mtimeMs
-    [st > dt, outPth]
-  compileStart = (lg) ->
-    console.log "[#{new Date().toLocaleString()}] Compiling #{lg} ..."
-  compileSuccess = (lg) ->
-    console.log " => #{lg} compiled"
-  compileCoffee = (pth) ->
-    [ok, outPth] = checkCompile pth, 'js'
-    if ok
-      compileStart 'coffee'
-      try
-        code = await fsp.readFile pth, { encoding: 'utf-8' }
-        out = coffee.compile code, {bare: yes}
-        await fsp.writeFile outPth, out
-      catch err
-        console.log err
-  compileSass = (pth) ->
-    [ok, outPth] = checkCompile pth, 'css'
-    if ok
-      compileStart 'sass'
-      try
-        out = sass.compile pth, { style: 'compressed' }
-        await fsp.writeFile outPth, out.css
-      catch err
-        console.log err
-  # Instructions ####
-  await createDir()
-  compileSass './src/style.sass'
-  compileCoffee './src/script.coffee'
-  # launch chokidar
-  watcher = chokidar.watch 'src'
-  watcher.on 'change', (pth) =>
-    console.Log "watcher, path => #{pth}"
-    switch pth.split('.')[1]
-      when 'coffee' then compileCoffee pth
-      when 'sass'   then compileSass pth
-  # launch the server
-  port = 5001
-  app = express()
-  app.use express.static('./dist')
-  app.set 'views', 'views'
-  app.set 'view engine', 'pug'
-  app.get '/', (_req, res) -> res.render 'roller'
-  app.listen(port, => console.log "Listening on port #{port}")

@@ -1,5 +1,35 @@
+mixin mixNumber(id, lab, v, lmt)
+  label(for=id)= lab
+  button.nomarg(onclick='numberMod("' + id + '",-1,' + lmt + ')') -
+  input.number(id=id,type='number',value=v,min=lmt,
+    onblur='numberBlur("' + id + '",' + lmt + ')')
+  button.nomarg(onclick='numberMod("' + id + '",1,' + lmt + ')') +
+
 doctype html
 html
   head
-  body
+    title Funny Roller
+    meta(charset='utf-8')
+    meta(name='viewport', content='width=device-width,initial-scale=1')
+    link(rel='Stylesheet',href='style.css')
+    script(type='text/javascript',src='script.js')
+  body(onload='init()')
     h1 Funny roller
+    .result(onclick='resClick()')
+    div
+      +mixNumber('furoll-ad','AD :',1,1)
+      +mixNumber('furoll-dd',' / DD :',0,0)
+      button(onclick='furollRoll()') Roll
+    div
+      button(onclick='oracle("improbable")') Improbable
+      button(onclick='oracle("normal")') Oracle
+      button(onclick='oracle("probable")') Probable
+    h2 Spécial
+    div
+      +mixNumber('statut','Statut :',1,1)
+      button(onclick='statutRoll()') Roll
+      button(onclick='statutAdd()') Add
+    div
+      //div question 1, 2, 3
+      //
+      //
