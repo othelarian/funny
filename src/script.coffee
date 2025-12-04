@@ -96,6 +96,26 @@ statutAdd = -> if res.spec.type is 'statut'
   res.spec.rolls.push die()
   statutRes()
 
+# ROLLS - CHOIX ##################################
+
+choixRoll = ->
+  resetRes 'choix'
+  nb = parseInt document.getElementById('choix').value
+  res.prep = "Choix 1d#{nb}"
+  res.rolls = "[#{die(nb)}]"
+  choixReset yes
+  outRes()
+
+choixMod = ->
+  if res.spec.type is 'choix'
+    res.res = document.getElementById('choix-lab').value
+    outRes()
+
+choixReset = (f = no) ->
+  document.getElementById('choix-lab').value = '--'
+  res.res = '--'
+  unless f then outRes()
+
 # INIT ###########################################
 
 init = ->

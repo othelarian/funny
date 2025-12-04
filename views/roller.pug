@@ -30,6 +30,7 @@ html
       button(onclick='statutRoll()') Roll
       button(onclick='statutAdd()') Add
     div
-      //div question 1, 2, 3
-      //
-      //
+      +mixNumber('choix','Choix (nb) :',2,2)
+      button(onclick='choixRoll()') Roll
+      input#choix-lab(onkeyup='choixMod()',value='--')
+      button(onclick='choixReset()') Reset
