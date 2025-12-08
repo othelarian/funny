@@ -1,5 +1,27 @@
 # HELPERS ########################################
 
+addOnTop = (parent, node) ->
+  if parent.hasChildNodes()
+    parent.insertBefore node, parent.firstChild
+  else
+    parent.appendChild node
+
+clearChildren = (node) ->
+  while node.lastElementChild
+    node.removeChild node.lastElementChild
+
+createElt = (tag, attrs = {}, content = '') ->
+  elt = document.createElement tag
+  elt.setAttribute(key, value) for key, value of attrs
+  if content isnt '' then elt.textContent = content
+  elt
+
+getElt = (selector, all = no) ->
+  if all then document.querySelectorAll selector
+  else document.querySelector selector
+
+# RES TOOLING ####################################
+
 resClick = -> await navigator.clipboard.writeText(res.r)
 
 die = (nb = 6) -> Math.floor(Math.random() * nb) + 1
@@ -9,13 +31,14 @@ res = {}
 resetRes = (type = 'none') ->
   res = {spec: {type: type}, prep: '', rolls: '', res: '', r:''}
 
-outRes = ->
+outRes = (rev = no) ->
   res.r = "d: #{res.prep} => #{res.rolls} -> #{res.res}"
   resClick()
-  document.querySelector('.result').textContent = res.r
+  histoSave(res, rev)
+  getElt('.result').textContent = res.r
 
 numberBlur = (trgt, lmt) ->
-  inp = document.getElementById trgt
+  inp = getElt "##{trgt}"
   v = parseInt inp.value
   unless not isNaN(v) and v >= lmt then inp.value = lmt
 
@@ -78,12 +101,12 @@ oracle = (prop = 'normal') ->
 
 # ROLLS - STATUT #################################
 
-statutRes = ->
+statutRes = (rev = no) ->
   res.prep = "Statut #{res.spec.n}"
   res.rolls = "[#{res.spec.rolls.join(',')}]"
   res.spec.succ = res.spec.rolls.filter((e) -> e > 4).length
   res.res = "#{res.spec.succ} succès"
-  outRes()
+  outRes(rev)
 
 statutRoll = ->
   resetRes 'statut'
@@ -94,7 +117,7 @@ statutRoll = ->
 statutAdd = -> if res.spec.type is 'statut'
   res.spec.n += 1
   res.spec.rolls.push die()
-  statutRes()
+  statutRes(yes)
 
 # ROLLS - CHOIX ##################################
 
@@ -109,14 +132,55 @@ choixRoll = ->
 choixMod = ->
   if res.spec.type is 'choix'
     res.res = document.getElementById('choix-lab').value
-    outRes()
+    outRes(yes)
 
 choixReset = (f = no) ->
   document.getElementById('choix-lab').value = '--'
   res.res = '--'
-  unless f then outRes()
+  unless f then outRes(yes)
+
+# HISTORIQUE #####################################
+
+histo = []
+
+histoClean = ->
+  localStorage.removeItem 'funny-histo'
+  histo = []
+  clearChildren getElt('#histo')
+
+histoRem = (evt) ->
+  #
+  console.log evt
+  #
+  localStorage.setItem 'funny-histo', JSON.parse(histo)
+  #
+
+histoSave = (data, rev = no, nosave = no) ->
+  if nosave or histo.length is 0
+    getElt('#histo-ctrl').classList.remove 'hide'
+  if rev
+    #
+    console.log 'modify last entry'
+    #
+  else
+    #
+    #idx = 
+    #
+    div = createElt 'div', {}, data.r
+    #btn = createElt 'button', {'onclick': 'histoRem()'}, 'X'
+    #
+    #div.appendChild btn
+    addOnTop getElt('#histo'), div
+  unless nosave
+    histo.push data
+    localStorage.setItem 'funny-histo', JSON.stringify(histo)
 
 # INIT ###########################################
 
 init = ->
+  # get back the histo, if exists
+  if localStorage.hasOwnProperty 'funny-histo'
+    histo = JSON.parse localStorage.getItem('funny-histo')
+    histoSave(data, no, yes) for data from histo
+  # finish the init by a reset
   resetRes()
